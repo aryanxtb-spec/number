@@ -1,437 +1,480 @@
-import React, { useState } from 'react';
-import { Sparkles, Phone, Star, Moon, Sun, ArrowRight, ShieldCheck, Loader2, Feather, Sparkle, AlertCircle, CheckCircle2, Info } from 'lucide-react';
-
-// --- NUMEROLOGY LOGIC MAPPINGS ---
-const POSITIONS = [
-  'It self / Individual',
-  'Decision Making',
-  'Business Partnership',
-  'Partnership / Investment',
-  'Children',
-  'Family Relationship',
-  'Marriage / Spouse life',
-  'Health',
-  'Public Relationship',
-  'Wealth'
-];
-
-const COMBINATIONS = [
-  { pairs: ['15', '51'], meaning: 'Self made person, Higher education, Leadership quality', type: 'positive' },
-  { pairs: ['31'], meaning: 'Self made person, Higher education, Leadership quality (Best)', type: 'positive' },
-  { pairs: ['137'], meaning: 'Considered one of the Best combinations', type: 'positive' },
-  { pairs: ['14', '41'], meaning: 'Risk of being cheated, Debt will increase, Loss or damage', type: 'negative' },
-  { pairs: ['17', '71'], meaning: 'Risk of extra marital affairs', type: 'negative' },
-  { pairs: ['18', '81'], meaning: 'Sad, defame number', type: 'negative' },
-  { pairs: ['19', '91'], meaning: 'Initiator: Whatever work they start, they complete', type: 'positive' },
-  { pairs: ['59', '95'], meaning: 'Government job combination', type: 'positive' },
-  { pairs: ['28', '82'], meaning: 'Negative combination (No water travelling, Shipping/Boating)', type: 'negative' },
-  { pairs: ['75', '57'], meaning: 'Strong connection to Astrology & Numerology', type: 'neutral' },
-  { pairs: ['54', '45'], meaning: 'Bandhan Yog (Health issues, Court cases)', type: 'negative' },
-  { pairs: ['38', '83'], meaning: 'Struggling phase', type: 'negative' },
-  { pairs: ['78', '87'], meaning: 'Depression tendencies', type: 'negative' },
-  { pairs: ['84', '48'], meaning: 'Nearly to death / Severe health risk combination', type: 'negative' },
-  { pairs: ['28', '32', '23'], meaning: 'Favorable for conceiving a child', type: 'positive' },
-  { pairs: ['36', '63'], meaning: 'Not good with spouse', type: 'negative' },
-  { pairs: ['86', '68', '49', '94'], meaning: 'Problematic combination (Health/Debt)', type: 'negative' },
-  { pairs: ['46', '64'], meaning: 'Rahu / Shukra addiction tendencies', type: 'negative' },
-  { pairs: ['363', '636'], meaning: 'Deep "Want" / Strong materialistic desires', type: 'neutral' },
-];
-
-const REPEAT_MEANINGS = {
-  '1': 'Health issues',
-  '2': 'Mood swings',
-  '3': 'Complex personality',
-  '4': 'Workaholic nature',
-  '5': 'Lazy tendencies',
-  '6': 'Stress / Excess Responsibility',
-  '7': 'Depression / Vairagya / Detached',
-  '8': 'Money problems',
-  '9': 'Anger issues'
-};
-
-const SINGLE_DIGIT_TRAITS = {
-  '1': 'Start / Initiative',
-  '2': 'Co-operation',
-  '3': 'Understanding',
-  '4': 'Workaholic',
-};
-
-export default function App() {
-  const [mobileNumber, setMobileNumber] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState('');
-
-  const handleInputChange = (e) => {
-    const value = e.target.value.replace(/\D/g, '');
-    if (value.length <= 10) {
-      setMobileNumber(value);
-      setError('');
-    }
-  };
-
-  const calculateNumerology = (numberStr) => {
-    // 1. Calculate Sum & Root Number
-    const digits = numberStr.split('').map(Number);
-    const totalSum = digits.reduce((a, b) => a + b, 0);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AstroDigits - Numerology Analyzer</title>
     
-    // Root digit calculation (e.g. 42 -> 4+2 = 6. If sum is 11 -> 1+1=2)
-    let tempSum = totalSum;
-    while (tempSum > 9) {
-      tempSum = String(tempSum).split('').map(Number).reduce((a, b) => a + b, 0);
-    }
-    const singleDigit = tempSum;
-
-    // 2. Rules Check
-    const hasZeros = numberStr.includes('0');
-    const endsWithZero = numberStr.endsWith('0');
-    const startEqualsEnd = numberStr[0] === numberStr[numberStr.length - 1];
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     
-    // 3. Find Combinations (Yogas)
-    let foundCombinations = [];
-    COMBINATIONS.forEach(combo => {
-      combo.pairs.forEach(pair => {
-        if (numberStr.includes(pair)) {
-          // Avoid duplicates if multiple pairs from same combo match
-          if (!foundCombinations.some(c => c.meaning === combo.meaning)) {
-            foundCombinations.push({ pair: pair, meaning: combo.meaning, type: combo.type });
-          }
-        }
-      });
-    });
-
-    // 4. Repeated Numbers (3 or more times)
-    let repeatedIssues = [];
-    const counts = {};
-    for (const char of numberStr) {
-      counts[char] = (counts[char] || 0) + 1;
-    }
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
-    let hasTimelyRepeated = false;
-    for (const [digit, count] of Object.entries(counts)) {
-      if (count >= 3) {
-        hasTimelyRepeated = true;
-        if (REPEAT_MEANINGS[digit]) {
-          repeatedIssues.push({ digit, count, meaning: REPEAT_MEANINGS[digit] });
-        }
-      }
-    }
+    <!-- Babel for compiling JSX in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
 
-    // 5. Positional Houses
-    const houses = digits.map((digit, index) => ({
-      position: index + 1,
-      aspect: POSITIONS[index] || 'Unknown',
-      digit: digit,
-      trait: SINGLE_DIGIT_TRAITS[digit] || null
-    }));
+    <script type="text/babel">
+        const { useState } = React;
 
-    return {
-      mobileNumber: numberStr,
-      totalSum,
-      singleDigit,
-      rules: {
-        hasZeros,
-        endsWithZero,
-        startEqualsEnd,
-        hasTimelyRepeated
-      },
-      foundCombinations,
-      repeatedIssues,
-      houses
-    };
-  };
+        // --- INLINE SVG ICONS (Replaces lucide-react for standalone HTML) ---
+        const Icon = ({ className, style, children }) => (
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>{children}</svg>
+        );
+        const Sun = (p) => <Icon {...p}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></Icon>;
+        const Moon = (p) => <Icon {...p}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></Icon>;
+        const Star = (p) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></Icon>;
+        const Sparkles = (p) => <Icon {...p}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4M3 5h4"/></Icon>;
+        const Sparkle = (p) => <Icon {...p}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></Icon>;
+        const Phone = (p) => <Icon {...p}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></Icon>;
+        const ArrowRight = (p) => <Icon {...p}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></Icon>;
+        const ShieldCheck = (p) => <Icon {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></Icon>;
+        const Loader2 = (p) => <Icon {...p}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></Icon>;
+        const Feather = (p) => <Icon {...p}><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></Icon>;
+        const AlertCircle = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></Icon>;
+        const CheckCircle2 = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></Icon>;
+        const Info = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></Icon>;
 
-  const handleAnalyze = (e) => {
-    e.preventDefault();
-    
-    if (mobileNumber.length !== 10) {
-      setError('Please enter a standard 10-digit mobile number.');
-      return;
-    }
 
-    setIsAnalyzing(true);
-    setResult(null);
+        // --- NUMEROLOGY LOGIC MAPPINGS ---
+        const POSITIONS = [
+          'It self / Individual',
+          'Decision Making',
+          'Business Partnership',
+          'Partnership / Investment',
+          'Children',
+          'Family Relationship',
+          'Marriage / Spouse life',
+          'Health',
+          'Public Relationship',
+          'Wealth'
+        ];
 
-    // Simulate analysis delay for effect
-    setTimeout(() => {
-      const analysisData = calculateNumerology(mobileNumber);
-      setResult(analysisData);
-      setIsAnalyzing(false);
-    }, 2500);
-  };
+        const COMBINATIONS = [
+          { pairs: ['15', '51'], meaning: 'Self made person, Higher education, Leadership quality', type: 'positive' },
+          { pairs: ['31'], meaning: 'Self made person, Higher education, Leadership quality (Best)', type: 'positive' },
+          { pairs: ['137'], meaning: 'Considered one of the Best combinations', type: 'positive' },
+          { pairs: ['14', '41'], meaning: 'Risk of being cheated, Debt will increase, Loss or damage', type: 'negative' },
+          { pairs: ['17', '71'], meaning: 'Risk of extra marital affairs', type: 'negative' },
+          { pairs: ['18', '81'], meaning: 'Sad, defame number', type: 'negative' },
+          { pairs: ['19', '91'], meaning: 'Initiator: Whatever work they start, they complete', type: 'positive' },
+          { pairs: ['59', '95'], meaning: 'Government job combination', type: 'positive' },
+          { pairs: ['28', '82'], meaning: 'Negative combination (No water travelling, Shipping/Boating)', type: 'negative' },
+          { pairs: ['75', '57'], meaning: 'Strong connection to Astrology & Numerology', type: 'neutral' },
+          { pairs: ['54', '45'], meaning: 'Bandhan Yog (Health issues, Court cases)', type: 'negative' },
+          { pairs: ['38', '83'], meaning: 'Struggling phase', type: 'negative' },
+          { pairs: ['78', '87'], meaning: 'Depression tendencies', type: 'negative' },
+          { pairs: ['84', '48'], meaning: 'Nearly to death / Severe health risk combination', type: 'negative' },
+          { pairs: ['28', '32', '23'], meaning: 'Favorable for conceiving a child', type: 'positive' },
+          { pairs: ['36', '63'], meaning: 'Not good with spouse', type: 'negative' },
+          { pairs: ['86', '68', '49', '94'], meaning: 'Problematic combination (Health/Debt)', type: 'negative' },
+          { pairs: ['46', '64'], meaning: 'Rahu / Shukra addiction tendencies', type: 'negative' },
+          { pairs: ['363', '636'], meaning: 'Deep "Want" / Strong materialistic desires', type: 'neutral' },
+        ];
 
-  const resetAnalysis = () => {
-    setResult(null);
-    setMobileNumber('');
-  };
+        const REPEAT_MEANINGS = {
+          '1': 'Health issues',
+          '2': 'Mood swings',
+          '3': 'Complex personality',
+          '4': 'Workaholic nature',
+          '5': 'Lazy tendencies',
+          '6': 'Stress / Excess Responsibility',
+          '7': 'Depression / Vairagya / Detached',
+          '8': 'Money problems',
+          '9': 'Anger issues'
+        };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 text-amber-950 font-sans relative overflow-hidden selection:bg-amber-500/30 pb-20">
-      
-      {/* Custom Animations */}
-      <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
-          50% { transform: translateY(-25px) rotate(8deg) scale(1.05); }
-        }
-        @keyframes float-slow {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(35px) rotate(-12deg); }
-        }
-      `}</style>
+        const SINGLE_DIGIT_TRAITS = {
+          '1': 'Start / Initiative',
+          '2': 'Co-operation',
+          '3': 'Understanding',
+          '4': 'Workaholic',
+        };
 
-      {/* Background Mystical Golden Elements & Feathers */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none fixed">
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-amber-300/20 rounded-full blur-[100px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-yellow-400/15 rounded-full blur-[120px]"></div>
-        <div className="absolute top-[30%] left-[50%] w-96 h-96 bg-white/60 rounded-full blur-[90px]"></div>
-        
-        <Feather className="absolute top-[15%] left-[10%] w-32 h-32 text-amber-600/10" style={{ animation: 'float 9s ease-in-out infinite' }} />
-        <Feather className="absolute top-[65%] right-[12%] w-48 h-48 text-yellow-600/10" style={{ animation: 'float-slow 14s ease-in-out infinite' }} />
-        <Feather className="absolute bottom-[15%] left-[20%] w-24 h-24 text-orange-500/10" style={{ animation: 'float 11s ease-in-out infinite' }} />
-      </div>
+        function App() {
+          const [mobileNumber, setMobileNumber] = useState('');
+          const [isAnalyzing, setIsAnalyzing] = useState(false);
+          const [result, setResult] = useState(null);
+          const [error, setError] = useState('');
 
-      {/* Navbar */}
-      <nav className="relative z-10 border-b border-amber-200/50 bg-white/40 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sun className="w-6 h-6 text-amber-500 animate-[spin_20s_linear_infinite]" />
-            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-yellow-500">
-              AstroDigits
-            </span>
-          </div>
-          <div className="hidden md:flex space-x-8 text-sm font-medium text-amber-800">
-            <a href="#" className="hover:text-amber-500 transition-colors">Home</a>
-            <a href="#about" className="hover:text-amber-500 transition-colors">Numerology Rules</a>
-          </div>
-        </div>
-      </nav>
+          const handleInputChange = (e) => {
+            const value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 10) {
+              setMobileNumber(value);
+              setError('');
+            }
+          };
 
-      {/* Main Content */}
-      <main className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 flex flex-col items-center justify-center min-h-[calc(100vh-64px)]">
-        
-        {/* Header Section */}
-        {!result && (
-          <div className="text-center max-w-3xl mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/60 border border-amber-300 text-amber-700 text-xs font-bold tracking-wide uppercase mb-6 shadow-sm">
-              <Sparkles className="w-3 h-3 text-amber-500" /> Advanced Logic Engine
-            </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6 leading-tight text-amber-950">
-              Analyze the <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500">Hidden Karma</span><br/>of Your Mobile Number
-            </h1>
-            <p className="text-lg text-amber-800/80 mb-8 font-medium">
-              We check for Bandhan Yogas, specific pairs, 10-house planetary positions, and repetitive sequences to give you a deep reading.
-            </p>
-          </div>
-        )}
-
-        {/* Input Area */}
-        <div className="w-full max-w-xl mb-12">
-          {!isAnalyzing && !result && (
-            <div className="bg-white/60 backdrop-blur-xl border border-white shadow-[0_8px_32px_rgba(251,191,36,0.15)] rounded-3xl p-6 md:p-8 animate-in fade-in zoom-in duration-500">
-              <form onSubmit={handleAnalyze} className="flex flex-col gap-4">
-                <label htmlFor="mobile" className="text-sm font-bold text-amber-900 block mb-1">
-                  Enter 10-Digit Mobile Number
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-amber-400" />
-                  </div>
-                  <input
-                    type="tel"
-                    id="mobile"
-                    value={mobileNumber}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 9876543210"
-                    maxLength="10"
-                    className="block w-full pl-12 pr-4 py-4 bg-white/80 border-2 border-amber-100 rounded-2xl text-xl tracking-widest text-amber-950 placeholder-amber-300 focus:ring-4 focus:ring-amber-200 focus:border-amber-400 transition-all outline-none font-bold text-center"
-                    autoComplete="off"
-                  />
-                </div>
-                {error && <p className="text-orange-500 text-sm pl-2 font-medium">{error}</p>}
-                
-                <button
-                  type="submit"
-                  disabled={mobileNumber.length !== 10}
-                  className="mt-2 w-full flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-white text-lg font-bold rounded-2xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
-                >
-                  Analyze Cosmic Digits <ArrowRight className="w-5 h-5" />
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* Loading State */}
-          {isAnalyzing && (
-            <div className="bg-white/60 backdrop-blur-xl border border-white shadow-[0_8px_32px_rgba(251,191,36,0.15)] rounded-3xl p-12 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in duration-500">
-              <div className="relative w-32 h-32 mb-6 flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-tr from-amber-200 to-yellow-100 rounded-full animate-ping opacity-40"></div>
-                <div className="absolute inset-2 border-[3px] border-dashed border-amber-300 rounded-full animate-[spin_10s_linear_infinite]"></div>
-                <div className="absolute inset-6 border border-amber-400/50 rounded-full animate-[spin_6s_linear_infinite_reverse]"></div>
-                <Sun className="w-12 h-12 text-amber-500 animate-[spin_4s_linear_infinite]" />
-              </div>
-              <h3 className="text-2xl font-bold text-amber-900 mb-2">Reading the 10 Houses...</h3>
-              <p className="text-amber-700 font-medium">Checking combinations and driver sequences</p>
-            </div>
-          )}
-        </div>
-
-        {/* RESULTS DASHBOARD */}
-        {result && (
-          <div className="w-full max-w-4xl space-y-6 animate-in slide-in-from-bottom-8 fade-in duration-700">
+          const calculateNumerology = (numberStr) => {
+            // 1. Calculate Sum & Root Number
+            const digits = numberStr.split('').map(Number);
+            const totalSum = digits.reduce((a, b) => a + b, 0);
             
-            {/* Header: Root Number */}
-            <div className="bg-white/70 backdrop-blur-xl border border-white shadow-xl rounded-3xl overflow-hidden flex flex-col md:flex-row">
-              <div className="bg-gradient-to-br from-amber-500 to-yellow-500 p-8 md:w-1/3 flex flex-col items-center justify-center text-white relative overflow-hidden">
-                <Sun className="absolute w-64 h-64 opacity-20 -right-10 -bottom-10 animate-[spin_40s_linear_infinite]" />
-                <span className="text-amber-100 font-bold uppercase tracking-widest text-xs mb-2 z-10">Root Digit</span>
-                <span className="text-8xl font-black z-10 drop-shadow-md">{result.singleDigit}</span>
-                <span className="mt-4 bg-white/20 px-4 py-1 rounded-full text-sm font-medium z-10 border border-white/30 backdrop-blur-md">
-                  Total Sum: {result.totalSum}
-                </span>
-              </div>
-              <div className="p-8 md:w-2/3 flex flex-col justify-center">
-                <h2 className="text-3xl font-extrabold text-amber-950 mb-2 tracking-widest">{result.mobileNumber.match(/.{1,3}/g).join('-')}</h2>
-                <p className="text-amber-800 font-medium mb-6">
-                  Your number has been analyzed across the 10 astrological houses. Below are the specific rules, combinations, and warnings triggered by your digits.
-                </p>
-                <button
-                  onClick={resetAnalysis}
-                  className="self-start px-6 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold rounded-xl transition-colors border border-amber-300"
-                >
-                  Analyze New Number
-                </button>
-              </div>
-            </div>
+            // Root digit calculation
+            let tempSum = totalSum;
+            while (tempSum > 9) {
+              tempSum = String(tempSum).split('').map(Number).reduce((a, b) => a + b, 0);
+            }
+            const singleDigit = tempSum;
 
-            {/* Grid for Insights */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            // 2. Rules Check
+            const hasZeros = numberStr.includes('0');
+            const endsWithZero = numberStr.endsWith('0');
+            const startEqualsEnd = numberStr[0] === numberStr[numberStr.length - 1];
+            
+            // 3. Find Combinations
+            let foundCombinations = [];
+            COMBINATIONS.forEach(combo => {
+              combo.pairs.forEach(pair => {
+                if (numberStr.includes(pair)) {
+                  if (!foundCombinations.some(c => c.meaning === combo.meaning)) {
+                    foundCombinations.push({ pair: pair, meaning: combo.meaning, type: combo.type });
+                  }
+                }
+              });
+            });
+
+            // 4. Repeated Numbers (3 or more times)
+            let repeatedIssues = [];
+            const counts = {};
+            for (const char of numberStr) {
+              counts[char] = (counts[char] || 0) + 1;
+            }
+            
+            let hasTimelyRepeated = false;
+            for (const [digit, count] of Object.entries(counts)) {
+              if (count >= 3) {
+                hasTimelyRepeated = true;
+                if (REPEAT_MEANINGS[digit]) {
+                  repeatedIssues.push({ digit, count, meaning: REPEAT_MEANINGS[digit] });
+                }
+              }
+            }
+
+            // 5. Positional Houses
+            const houses = digits.map((digit, index) => ({
+              position: index + 1,
+              aspect: POSITIONS[index] || 'Unknown',
+              digit: digit,
+              trait: SINGLE_DIGIT_TRAITS[digit] || null
+            }));
+
+            return {
+              mobileNumber: numberStr,
+              totalSum,
+              singleDigit,
+              rules: {
+                hasZeros,
+                endsWithZero,
+                startEqualsEnd,
+                hasTimelyRepeated
+              },
+              foundCombinations,
+              repeatedIssues,
+              houses
+            };
+          };
+
+          const handleAnalyze = (e) => {
+            e.preventDefault();
+            
+            if (mobileNumber.length !== 10) {
+              setError('Please enter a standard 10-digit mobile number.');
+              return;
+            }
+
+            setIsAnalyzing(true);
+            setResult(null);
+
+            setTimeout(() => {
+              const analysisData = calculateNumerology(mobileNumber);
+              setResult(analysisData);
+              setIsAnalyzing(false);
+            }, 2500);
+          };
+
+          const resetAnalysis = () => {
+            setResult(null);
+            setMobileNumber('');
+          };
+
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 text-amber-950 font-sans relative overflow-hidden selection:bg-amber-500/30 pb-20">
               
-              {/* 5 Golden Rules Check */}
-              <div className="bg-white/70 backdrop-blur-xl border border-white shadow-lg rounded-3xl p-6">
-                <h3 className="text-lg font-bold text-amber-900 mb-4 flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-amber-500" /> The Golden Rules
-                </h3>
-                <ul className="space-y-3">
-                  <li className={`flex items-start gap-3 p-3 rounded-xl border ${result.rules.hasZeros ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'}`}>
-                    {result.rules.hasZeros ? <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" /> : <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" />}
-                    <div>
-                      <strong className="block text-sm">No Zero Rule</strong>
-                      <span className="text-xs opacity-90">{result.rules.hasZeros ? "Rule broken: Zeros found in number." : "Passed: No zeros present."}</span>
-                    </div>
-                  </li>
-                  <li className={`flex items-start gap-3 p-3 rounded-xl border ${result.rules.startEqualsEnd ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'}`}>
-                    {result.rules.startEqualsEnd ? <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" /> : <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" />}
-                    <div>
-                      <strong className="block text-sm">Start & Finish Rule</strong>
-                      <span className="text-xs opacity-90">{result.rules.startEqualsEnd ? "Rule broken: Number starts and ends with the same digit." : "Passed: Start and end digits differ."}</span>
-                    </div>
-                  </li>
-                  <li className={`flex items-start gap-3 p-3 rounded-xl border ${result.rules.hasTimelyRepeated ? 'bg-orange-50 border-orange-200 text-orange-800' : 'bg-green-50 border-green-200 text-green-800'}`}>
-                    {result.rules.hasTimelyRepeated ? <Info className="w-5 h-5 mt-0.5 shrink-0" /> : <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" />}
-                    <div>
-                      <strong className="block text-sm">No Timely Repetition</strong>
-                      <span className="text-xs opacity-90">{result.rules.hasTimelyRepeated ? "Warning: A digit repeats 3 or more times." : "Passed: Digits are balanced."}</span>
-                    </div>
-                  </li>
-                </ul>
+              {/* Custom Animations */}
+              <style>{`
+                @keyframes float {
+                  0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
+                  50% { transform: translateY(-25px) rotate(8deg) scale(1.05); }
+                }
+                @keyframes float-slow {
+                  0%, 100% { transform: translateY(0px) rotate(0deg); }
+                  50% { transform: translateY(35px) rotate(-12deg); }
+                }
+              `}</style>
+
+              {/* Background Elements */}
+              <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none fixed">
+                <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-amber-300/20 rounded-full blur-[100px]"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-yellow-400/15 rounded-full blur-[120px]"></div>
+                <div className="absolute top-[30%] left-[50%] w-96 h-96 bg-white/60 rounded-full blur-[90px]"></div>
+                
+                <Feather className="absolute top-[15%] left-[10%] w-32 h-32 text-amber-600/10" style={{ animation: 'float 9s ease-in-out infinite' }} />
+                <Feather className="absolute top-[65%] right-[12%] w-48 h-48 text-yellow-600/10" style={{ animation: 'float-slow 14s ease-in-out infinite' }} />
+                <Feather className="absolute bottom-[15%] left-[20%] w-24 h-24 text-orange-500/10" style={{ animation: 'float 11s ease-in-out infinite' }} />
               </div>
 
-              {/* Repetition Impacts */}
-              <div className="bg-white/70 backdrop-blur-xl border border-white shadow-lg rounded-3xl p-6">
-                <h3 className="text-lg font-bold text-amber-900 mb-4 flex items-center gap-2">
-                  <Feather className="w-5 h-5 text-amber-500" /> Repetition Effects
-                </h3>
-                {result.repeatedIssues.length > 0 ? (
-                  <div className="space-y-3">
-                    {result.repeatedIssues.map((issue, idx) => (
-                      <div key={idx} className="bg-orange-50/50 border border-orange-200 p-3 rounded-xl flex items-center gap-3">
-                        <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-bold text-lg shrink-0">
-                          {issue.digit}
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-orange-800 uppercase tracking-wider mb-0.5">Appears {issue.count} times</p>
-                          <p className="text-sm text-orange-900 font-medium">{issue.meaning}</p>
-                        </div>
-                      </div>
-                    ))}
+              {/* Navbar */}
+              <nav className="relative z-10 border-b border-amber-200/50 bg-white/40 backdrop-blur-md">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sun className="w-6 h-6 text-amber-500 animate-[spin_20s_linear_infinite]" />
+                    <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-yellow-500">
+                      AstroDigits
+                    </span>
                   </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-amber-700/60 text-sm font-medium p-4 border border-dashed border-amber-200 rounded-xl">
-                    No excessive repeated numbers found. Good balance!
+                  <div className="hidden md:flex space-x-8 text-sm font-medium text-amber-800">
+                    <a href="#" className="hover:text-amber-500 transition-colors">Home</a>
+                    <a href="#about" className="hover:text-amber-500 transition-colors">Numerology Rules</a>
+                  </div>
+                </div>
+              </nav>
+
+              {/* Main Content */}
+              <main className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 flex flex-col items-center justify-center min-h-[calc(100vh-64px)]">
+                
+                {/* Header Section */}
+                {!result && (
+                  <div className="text-center max-w-3xl mb-12">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/60 border border-amber-300 text-amber-700 text-xs font-bold tracking-wide uppercase mb-6 shadow-sm">
+                      <Sparkles className="w-3 h-3 text-amber-500" /> Advanced Logic Engine
+                    </div>
+                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6 leading-tight text-amber-950">
+                      Analyze the <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500">Hidden Karma</span><br/>of Your Mobile Number
+                    </h1>
+                    <p className="text-lg text-amber-800/80 mb-8 font-medium">
+                      We check for Bandhan Yogas, specific pairs, 10-house planetary positions, and repetitive sequences to give you a deep reading.
+                    </p>
                   </div>
                 )}
-              </div>
-            </div>
 
-            {/* Found Combinations */}
-            <div className="bg-white/70 backdrop-blur-xl border border-white shadow-lg rounded-3xl p-6 md:p-8">
-              <h3 className="text-xl font-bold text-amber-900 mb-6 flex items-center gap-2">
-                <Sparkles className="w-6 h-6 text-amber-500" /> Special Number Combinations
-              </h3>
-              
-              {result.foundCombinations.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {result.foundCombinations.map((combo, idx) => (
-                    <div key={idx} className={`p-4 rounded-2xl border ${
-                      combo.type === 'positive' ? 'bg-green-50 border-green-200' :
-                      combo.type === 'negative' ? 'bg-red-50 border-red-200' :
-                      'bg-amber-50 border-amber-200'
-                    }`}>
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className={`px-2.5 py-1 rounded-md text-sm font-black ${
-                          combo.type === 'positive' ? 'bg-green-200 text-green-800' :
-                          combo.type === 'negative' ? 'bg-red-200 text-red-800' :
-                          'bg-amber-200 text-amber-800'
-                        }`}>
-                          {combo.pair}
+                {/* Input Area */}
+                <div className="w-full max-w-xl mb-12">
+                  {!isAnalyzing && !result && (
+                    <div className="bg-white/60 backdrop-blur-xl border border-white shadow-[0_8px_32px_rgba(251,191,36,0.15)] rounded-3xl p-6 md:p-8 animate-in fade-in zoom-in duration-500">
+                      <form onSubmit={handleAnalyze} className="flex flex-col gap-4">
+                        <label htmlFor="mobile" className="text-sm font-bold text-amber-900 block mb-1">
+                          Enter 10-Digit Mobile Number
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Phone className="h-5 w-5 text-amber-400" />
+                          </div>
+                          <input
+                            type="tel"
+                            id="mobile"
+                            value={mobileNumber}
+                            onChange={handleInputChange}
+                            placeholder="e.g. 9876543210"
+                            maxLength="10"
+                            className="block w-full pl-12 pr-4 py-4 bg-white/80 border-2 border-amber-100 rounded-2xl text-xl tracking-widest text-amber-950 placeholder-amber-300 focus:ring-4 focus:ring-amber-200 focus:border-amber-400 transition-all outline-none font-bold text-center"
+                            autoComplete="off"
+                          />
+                        </div>
+                        {error && <p className="text-orange-500 text-sm pl-2 font-medium">{error}</p>}
+                        
+                        <button
+                          type="submit"
+                          disabled={mobileNumber.length !== 10}
+                          className="mt-2 w-full flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-white text-lg font-bold rounded-2xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                        >
+                          Analyze Cosmic Digits <ArrowRight className="w-5 h-5" />
+                        </button>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Loading State */}
+                  {isAnalyzing && (
+                    <div className="bg-white/60 backdrop-blur-xl border border-white shadow-[0_8px_32px_rgba(251,191,36,0.15)] rounded-3xl p-12 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in duration-500">
+                      <div className="relative w-32 h-32 mb-6 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-gradient-to-tr from-amber-200 to-yellow-100 rounded-full animate-ping opacity-40"></div>
+                        <div className="absolute inset-2 border-[3px] border-dashed border-amber-300 rounded-full animate-[spin_10s_linear_infinite]"></div>
+                        <div className="absolute inset-6 border border-amber-400/50 rounded-full animate-[spin_6s_linear_infinite_reverse]"></div>
+                        <Sun className="w-12 h-12 text-amber-500 animate-[spin_4s_linear_infinite]" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-amber-900 mb-2">Reading the 10 Houses...</h3>
+                      <p className="text-amber-700 font-medium">Checking combinations and driver sequences</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* RESULTS DASHBOARD */}
+                {result && (
+                  <div className="w-full max-w-4xl space-y-6 animate-in slide-in-from-bottom-8 fade-in duration-700">
+                    
+                    {/* Header: Root Number */}
+                    <div className="bg-white/70 backdrop-blur-xl border border-white shadow-xl rounded-3xl overflow-hidden flex flex-col md:flex-row">
+                      <div className="bg-gradient-to-br from-amber-500 to-yellow-500 p-8 md:w-1/3 flex flex-col items-center justify-center text-white relative overflow-hidden">
+                        <Sun className="absolute w-64 h-64 opacity-20 -right-10 -bottom-10 animate-[spin_40s_linear_infinite]" />
+                        <span className="text-amber-100 font-bold uppercase tracking-widest text-xs mb-2 z-10">Root Digit</span>
+                        <span className="text-8xl font-black z-10 drop-shadow-md">{result.singleDigit}</span>
+                        <span className="mt-4 bg-white/20 px-4 py-1 rounded-full text-sm font-medium z-10 border border-white/30 backdrop-blur-md">
+                          Total Sum: {result.totalSum}
                         </span>
                       </div>
-                      <p className={`text-sm font-semibold ${
-                        combo.type === 'positive' ? 'text-green-900' :
-                        combo.type === 'negative' ? 'text-red-900' :
-                        'text-amber-900'
-                      }`}>
-                        {combo.meaning}
-                      </p>
+                      <div className="p-8 md:w-2/3 flex flex-col justify-center">
+                        <h2 className="text-3xl font-extrabold text-amber-950 mb-2 tracking-widest">{result.mobileNumber.match(/.{1,3}/g).join('-')}</h2>
+                        <p className="text-amber-800 font-medium mb-6">
+                          Your number has been analyzed across the 10 astrological houses. Below are the specific rules, combinations, and warnings triggered by your digits.
+                        </p>
+                        <button
+                          onClick={resetAnalysis}
+                          className="self-start px-6 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold rounded-xl transition-colors border border-amber-300"
+                        >
+                          Analyze New Number
+                        </button>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-amber-700 font-medium p-4 border border-dashed border-amber-200 rounded-xl text-center">
-                  No major positive or negative pair yogas detected in this number sequence.
-                </p>
-              )}
-            </div>
 
-            {/* The 10 Houses Breakdown */}
-            <div className="bg-white/70 backdrop-blur-xl border border-white shadow-lg rounded-3xl p-6 md:p-8">
-              <h3 className="text-xl font-bold text-amber-900 mb-6 flex items-center gap-2">
-                <Star className="w-6 h-6 text-amber-500" /> The 10 Houses of Life
-              </h3>
-              <p className="text-sm text-amber-800 mb-6 font-medium">Each digit's placement affects a specific area of your life journey based on its position.</p>
-              
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {result.houses.map((house, idx) => (
-                  <div key={idx} className="bg-gradient-to-b from-white to-amber-50 border border-amber-100 rounded-2xl p-4 text-center hover:shadow-md transition-shadow relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-12 h-12 bg-amber-100 rounded-bl-full -z-0 opacity-50 group-hover:scale-110 transition-transform"></div>
-                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest block mb-1 relative z-10">House {house.position}</span>
-                    <span className="text-3xl font-black text-amber-700 block mb-2 relative z-10">{house.digit}</span>
-                    <span className="text-xs font-bold text-amber-900 leading-tight block relative z-10">{house.aspect}</span>
-                    {house.trait && (
-                      <span className="mt-2 text-[10px] text-amber-600 font-semibold bg-amber-100 px-2 py-0.5 rounded-full inline-block relative z-10">
-                        {house.trait}
-                      </span>
-                    )}
+                    {/* Grid for Insights */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      
+                      {/* 5 Golden Rules Check */}
+                      <div className="bg-white/70 backdrop-blur-xl border border-white shadow-lg rounded-3xl p-6">
+                        <h3 className="text-lg font-bold text-amber-900 mb-4 flex items-center gap-2">
+                          <ShieldCheck className="w-5 h-5 text-amber-500" /> The Golden Rules
+                        </h3>
+                        <ul className="space-y-3">
+                          <li className={`flex items-start gap-3 p-3 rounded-xl border ${result.rules.hasZeros ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'}`}>
+                            {result.rules.hasZeros ? <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" /> : <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" />}
+                            <div>
+                              <strong className="block text-sm">No Zero Rule</strong>
+                              <span className="text-xs opacity-90">{result.rules.hasZeros ? "Rule broken: Zeros found in number." : "Passed: No zeros present."}</span>
+                            </div>
+                          </li>
+                          <li className={`flex items-start gap-3 p-3 rounded-xl border ${result.rules.startEqualsEnd ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'}`}>
+                            {result.rules.startEqualsEnd ? <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" /> : <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" />}
+                            <div>
+                              <strong className="block text-sm">Start & Finish Rule</strong>
+                              <span className="text-xs opacity-90">{result.rules.startEqualsEnd ? "Rule broken: Number starts and ends with the same digit." : "Passed: Start and end digits differ."}</span>
+                            </div>
+                          </li>
+                          <li className={`flex items-start gap-3 p-3 rounded-xl border ${result.rules.hasTimelyRepeated ? 'bg-orange-50 border-orange-200 text-orange-800' : 'bg-green-50 border-green-200 text-green-800'}`}>
+                            {result.rules.hasTimelyRepeated ? <Info className="w-5 h-5 mt-0.5 shrink-0" /> : <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" />}
+                            <div>
+                              <strong className="block text-sm">No Timely Repetition</strong>
+                              <span className="text-xs opacity-90">{result.rules.hasTimelyRepeated ? "Warning: A digit repeats 3 or more times." : "Passed: Digits are balanced."}</span>
+                            </div>
+                          </li>
+                        </ul>
+                      </div>
+
+                      {/* Repetition Impacts */}
+                      <div className="bg-white/70 backdrop-blur-xl border border-white shadow-lg rounded-3xl p-6">
+                        <h3 className="text-lg font-bold text-amber-900 mb-4 flex items-center gap-2">
+                          <Feather className="w-5 h-5 text-amber-500" /> Repetition Effects
+                        </h3>
+                        {result.repeatedIssues.length > 0 ? (
+                          <div className="space-y-3">
+                            {result.repeatedIssues.map((issue, idx) => (
+                              <div key={idx} className="bg-orange-50/50 border border-orange-200 p-3 rounded-xl flex items-center gap-3">
+                                <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-bold text-lg shrink-0">
+                                  {issue.digit}
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold text-orange-800 uppercase tracking-wider mb-0.5">Appears {issue.count} times</p>
+                                  <p className="text-sm text-orange-900 font-medium">{issue.meaning}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-amber-700/60 text-sm font-medium p-4 border border-dashed border-amber-200 rounded-xl">
+                            No excessive repeated numbers found. Good balance!
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Found Combinations */}
+                    <div className="bg-white/70 backdrop-blur-xl border border-white shadow-lg rounded-3xl p-6 md:p-8">
+                      <h3 className="text-xl font-bold text-amber-900 mb-6 flex items-center gap-2">
+                        <Sparkles className="w-6 h-6 text-amber-500" /> Special Number Combinations
+                      </h3>
+                      
+                      {result.foundCombinations.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {result.foundCombinations.map((combo, idx) => (
+                            <div key={idx} className={`p-4 rounded-2xl border ${
+                              combo.type === 'positive' ? 'bg-green-50 border-green-200' :
+                              combo.type === 'negative' ? 'bg-red-50 border-red-200' :
+                              'bg-amber-50 border-amber-200'
+                            }`}>
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className={`px-2.5 py-1 rounded-md text-sm font-black ${
+                                  combo.type === 'positive' ? 'bg-green-200 text-green-800' :
+                                  combo.type === 'negative' ? 'bg-red-200 text-red-800' :
+                                  'bg-amber-200 text-amber-800'
+                                }`}>
+                                  {combo.pair}
+                                </span>
+                              </div>
+                              <p className={`text-sm font-semibold ${
+                                combo.type === 'positive' ? 'text-green-900' :
+                                combo.type === 'negative' ? 'text-red-900' :
+                                'text-amber-900'
+                              }`}>
+                                {combo.meaning}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-amber-700 font-medium p-4 border border-dashed border-amber-200 rounded-xl text-center">
+                          No major positive or negative pair yogas detected in this number sequence.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* The 10 Houses Breakdown */}
+                    <div className="bg-white/70 backdrop-blur-xl border border-white shadow-lg rounded-3xl p-6 md:p-8">
+                      <h3 className="text-xl font-bold text-amber-900 mb-6 flex items-center gap-2">
+                        <Star className="w-6 h-6 text-amber-500" /> The 10 Houses of Life
+                      </h3>
+                      <p className="text-sm text-amber-800 mb-6 font-medium">Each digit's placement affects a specific area of your life journey based on its position.</p>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        {result.houses.map((house, idx) => (
+                          <div key={idx} className="bg-gradient-to-b from-white to-amber-50 border border-amber-100 rounded-2xl p-4 text-center hover:shadow-md transition-shadow relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-12 h-12 bg-amber-100 rounded-bl-full -z-0 opacity-50 group-hover:scale-110 transition-transform"></div>
+                            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest block mb-1 relative z-10">House {house.position}</span>
+                            <span className="text-3xl font-black text-amber-700 block mb-2 relative z-10">{house.digit}</span>
+                            <span className="text-xs font-bold text-amber-900 leading-tight block relative z-10">{house.aspect}</span>
+                            {house.trait && (
+                              <span className="mt-2 text-[10px] text-amber-600 font-semibold bg-amber-100 px-2 py-0.5 rounded-full inline-block relative z-10">
+                                {house.trait}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                   </div>
-                ))}
-              </div>
+                )}
+              </main>
+
             </div>
+          );
+        }
 
-          </div>
-        )}
-      </main>
-
-    </div>
-  );
-}
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
